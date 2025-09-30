@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生き残りゲーム ver.4</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+body {
+font-family: 'DotGothic16', sans-serif;
+touch-action: manipulation;
+background-image: url('https://images.unsplash.com/photo-1504519354215-b5155b5500a2?q=80&w=1974&auto=format&fit=crop');
+background-size: cover;
+background-position: center;
+}
+.pixel-border {
+border-style: solid;
+border-image-slice: 4;
+border-image-width: 4;
+border-image-repeat: stretch;
+border-image-source: url('data:image/svg+xml;utf8,<?xml version="1.0" encoding="UTF-8" ?><svg version="1.1" width="8" height="8" xmlns="http://www.w3.org/2000/svg"><path d="M3 0 h2 v1 h-2 z M0 3 h1 v2 h-1 z M7 3 h1 v2 h-1 z M3 7 h2 v1 h-2 z M1 1 h1 v1 h-1 z M5 1 h1 v1 h-1 z M1 5 h1 v1 h-1 z M5 5 h1 v1 h-1 z" fill="white" /></svg>');
+border-image-outset: 2;
+}
+.btn-pixel {
+position: relative;
+display: inline-block;
+padding: 0.8rem 1.5rem;
+border: 2px solid #fff;
+background: #111827;
+color: #fff;
+text-align: center;
+cursor: pointer;
+user-select: none;
+transition: all 0.2s ease;
+box-shadow: 4px 4px 0px 0px #fff;
+}
+.btn-pixel:hover {
+background: #1f2937;
+box-shadow: 2px 2px 0px 0px #fff;
+transform: translate(2px, 2px);
+}
+.btn-pixel:active {
+background: #374151;
+box-shadow: 0px 0px 0px 0px #fff;
+transform: translate(4px, 4px);
+}
+</style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen">
+
+<div id="game-container" class="w-full max-w-lg mx-auto p-4 md:p-6 backdrop-blur-sm bg-gray-900/80 pixel-border border-8 rounded-lg">
+
+<!-- Start Screen -->
+<div id="start-screen" class="text-center">
+<h1 class="text-4xl md:text-5xl font-bold mb-4">生き残りゲーム</h1>
+<p class="text-lg mb-8">あなたは目が覚めた。<br>そこは緑深い無人島だった。<br>生き延びるために、何かを口にしなければならない。<br>たとえそれが、食べ物でなくても…</p>
+<button id="start-button" class="btn-pixel text-2xl">ゲーム開始</button>
+</div>
+
+<!-- Main Game Screen (Hidden by default) -->
+<div id="main-game" class="hidden">
+<!-- Status Display -->
+<div class="mb-6 p-3 bg-black/50 border-2 border-gray-600 rounded">
+<div class="flex justify-between items-center mb-2">
+<div class="text-xl">
+<span id="day-counter">1</span>日目
+</div>
+</div>
+<!-- HP Bar -->
+<div class="mb-2">
+<span class="text-sm font-bold">たいりょく</span>
+<div class="w-full bg-gray-600 h-6 border-2 border-gray-500 rounded">
+<div id="hp-bar" class="bg-green-500 h-full text-center px-1 text-sm text-black font-bold transition-all duration-500" style="width: 100%;">100</div>
+</div>
+</div>
+<!-- Hunger Bar -->
+<div>
+<span class="text-sm font-bold">くうふく</span>
+<div class="w-full bg-gray-600 h-6 border-2 border-gray-500 rounded">
+<div id="hunger-bar" class="bg-yellow-500 h-full text-center px-1 text-sm text-black font-bold transition-all duration-500" style="width: 100%;">100</div>
+</div>
+</div>
+</div>
+
+<!-- Message Area -->
+<div id="message-area" class="h-24 p-3 mb-6 bg-black/50 border-2 border-gray-600 text-lg leading-tight flex items-center justify-center text-center rounded">
+目の前に何かがある…
+</div>
+
+<!-- Food Area -->
+<div class="text-center mb-6">
+<div id="food-image-container" class="flex justify-center items-center h-40">
+<!-- SVG will be injected here -->
+</div>
+<h2 id="food-name" class="text-2xl font-bold mt-4 mb-1">何か</h2>
+<p id="food-description" class="text-gray-300">これは一体なんだろう？</p>
+</div>
+
+<!-- Action Buttons -->
+<div id="actions-area" class="flex justify-around">
+<button id="eat-button" class="btn-pixel text-xl w-32">食べる</button>
+<button id="skip-button" class="btn-pixel text-xl w-32">食べない</button>
+</div>
+</div>
+
+<!-- Result Screen (Overlay) -->
+<div id="result-screen" class="hidden absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center text-center p-4">
+<h2 id="result-title" class="text-6xl font-bold mb-4"></h2>
+<p id="result-message" class="text-2xl mb-8"></p>
+<button id="restart-button" class="btn-pixel text-2xl">もう一度</button>
+</div>
+</div>
+
+<script>
+// Game elements
+const startScreen = document.getElementById('start-screen');
+const mainGame = document.getElementById('main-game');
+const resultScreen = document.getElementById('result-screen');
+const startButton = document.getElementById('start-button');
+const restartButton = document.getElementById('restart-button');
+
+const dayCounter = document.getElementById('day-counter');
+const hpBar = document.getElementById('hp-bar');
+const hungerBar = document.getElementById('hunger-bar');
+const messageArea = document.getElementById('message-area');
+
+const foodImageContainer = document.getElementById('food-image-container');
+const foodName = document.getElementById('food-name');
+const foodDescription = document.getElementById('food-description');
+
+const eatButton = document.getElementById('eat-button');
+const skipButton = document.getElementById('skip-button');
+
+const resultTitle = document.getElementById('result-title');
+const resultMessage = document.getElementById('result-message');
+
+// Game state
+let hp = 100;
+let hunger = 100;
+let day = 1;
+const maxHp = 100;
+const maxHunger = 100;
+const targetDays = 30;
+let currentFood = null;
+
+// Food data with SVG illustrations
+const foods = [
+// --- Edible-ish Things ---
+{ name: 'あやしいキノコ', description: '毒々しい色をしている。食べたら笑いが止まらなくなりそうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M75,50 C75,60 65,70 50,70 C35,70 25,60 25,50 C25,30 40,20 50,20 C60,20 75,30 75,50 Z" fill="#ff4500"/><circle cx="40" cy="40" r="5" fill="white"/><circle cx="60" cy="35" r="6" fill="white"/><circle cx="50" cy="55" r="4" fill="white"/><rect x="45" y="70" width="10" height="20" fill="#f5deb3" rx="2"/></svg>', effect: -30, hungerEffect: 5, message: '視界がぐにゃりと歪んだ！これは毒キノコだ！' },
+{ name: '新鮮なバナナ', description: '南国といえばこれ。完璧な黄色だ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 30 70 Q 50 20 80 50 Q 60 80 30 70 Z" fill="#ffd700"/><rect x="75" y="42" width="5" height="10" fill="brown" transform="rotate(20 77.5 47)"/></svg>', effect: 10, hungerEffect: 20, message: '甘くて美味しい！南国気分で元気が出た。' },
+{ name: 'カチカチのパン', description: '誰かの忘れ物だろうか。武器になりそうなほど硬い。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20,70 C20,50 30,40 50,40 C70,40 80,50 80,70 Z" fill="#deb887"/><line x1="30" y1="50" x2="40" y2="60" stroke="#8b4513" stroke-width="2"/><line x1="45" y1="50" x2="55" y2="60" stroke="#8b4513" stroke-width="2"/><line x1="60" y1="50" x2="70" y2="60" stroke="#8b4513" stroke-width="2"/></svg>', effect: 5, hungerEffect: 25, message: '顎が疲れたが、なんとか食べた。お腹は満たされた。' },
+{ name: '謎の大きな肉', description: '骨つき肉。原始時代のような気分になる。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="25" cy="50" r="15" fill="#f5f5dc"/><rect x="25" y="40" width="50" height="20" fill="#a0522d"/><path d="M75,40 Q 85 50 75 60 L 65 60 Q 75 50 65 40 Z" fill="#a0522d"/></svg>', effect: 20, hungerEffect: 40, message: 'ワイルドでジューシー！力がみなぎってきた！' },
+{ name: '光る液体', description: '洞窟の奥で見つけた。飲むと超人になれるかもしれない。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M40,20 L60,20 L60,40 L70,50 L70,80 L30,80 L30,50 L40,40 Z" fill="none" stroke="white" stroke-width="3"/><rect x="35" y="55" width="30" height="25" fill="#00ffff" opacity="0.8"/></svg>', effect: () => (Math.random() < 0.5 ? 50 : -50), hungerEffect: 5, message: (val) => (val > 0 ? '体が光に包まれ、傷が癒えていく！' : '激しい腹痛！地面を転げ回った！') },
+{ name: 'きれいな花', description: '甘い蜜の香りがする。観賞用にしておきたいが…。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="10" fill="yellow"/><path d="M50,50 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" fill="#ff69b4" transform="translate(15,0)"/><path d="M50,50 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" fill="#ff69b4" transform="translate(-15,0)"/><path d="M50,50 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" fill="#ff69b4" transform="translate(0,15)"/><path d="M50,50 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" fill="#ff69b4" transform="translate(0,-15)"/></svg>', effect: -5, hungerEffect: 2, message: '美味しくない…。お腹の足しにもならなかった。' },
+{ name: '巨大なタマゴ', description: '何のタマゴかは不明。目玉焼きにしたら美味しそうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="55" rx="25" ry="30" fill="#f5f5dc"/></svg>', effect: 25, hungerEffect: 35, message: '濃厚で栄養満点！最高の朝食だ。' },
+{ name: 'ココナッツ', description: '硬い殻に覆われている。割るのは大変そうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="#8b4513"/><circle cx="45" cy="45" r="3" fill="black"/><circle cx="55" cy="45" r="3" fill="black"/><circle cx="50" cy="55" r="3" fill="black"/></svg>', effect: 15, hungerEffect: 25, message: '甘い果汁が体に染み渡る！白い果肉も美味しい。' },
+{ name: '浜辺の貝', description: '潮溜まりで見つけた。食べられる種類だろうか？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 70 C 40 40, 60 40, 80 70 L 50 80 Z" fill="#ffdab9"/><rect x="48" y="68" width="4" height="4" fill="#d2b48c"/></svg>', effect: () => (Math.random() < 0.7 ? 15 : -25), hungerEffect: 10, message: (val) => (val > 0 ? '磯の香りが口に広がる。これは当たりだ！' : 'うっ…砂と一緒に変な味もする。お腹が痛い。') },
+{ name: '茂みの木の実', description: '赤くて小さい実。鳥が食べているのを見た。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="40" cy="50" r="10" fill="red"/><circle cx="60" cy="50" r="10" fill="red"/><circle cx="50" cy="65" r="10" fill="red"/><path d="M50,20 L 50 50" stroke="green" stroke-width="3"/></svg>', effect: 5, hungerEffect: 10, message: '少し酸っぱいが、食べられないことはない。' },
+{ name: '湧き水', description: '岩間から澄んだ水が湧き出ている。喉が渇いていたところだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M30 30 Q 50 60 30 80" fill="none" stroke="#add8e6" stroke-width="5"/><path d="M50 20 Q 70 50 50 70" fill="none" stroke="#add8e6" stroke-width="5"/><path d="M70 40 Q 90 70 70 90" fill="none" stroke="#add8e6" stroke-width="5"/></svg>', effect: 15, hungerEffect: 2, message: '冷たくて美味しい！体中に染み渡り、活力が戻ってきた。' },
+{ name: '巨大な獣の足', description: '一体どんな生物なのか…。毛むくじゃらだが肉は多そうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="30" y="20" width="40" height="70" fill="#8b4513" rx="10"/><path d="M25 80 L 35 90 L 45 80 Z" fill="white"/><path d="M45 80 L 55 90 L 65 80 Z" fill="white"/><path d="M65 80 L 75 90 L 85 80 Z" fill="white"/></svg>', effect: 30, hungerEffect: 60, message: '硬いが食べごたえは抜群だ！これで数日は戦える！' },
+{ name: '川で捕まえた魚', description: 'ピチピチと跳ねている。新鮮そのものだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 50 C 30 20, 70 20, 90 50 C 70 80, 30 80, 10 50 Z" fill="silver"/><circle cx="80" cy="48" r="3" fill="black"/></svg>', effect: 20, hungerEffect: 30, message: '淡白で美味しい。焼いて食べたいところだが仕方ない。' },
+{ name: 'へんな果物', description: '紫色のトゲトゲした果物。未知の味に挑戦するか。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="25" fill="#8a2be2"/><path d="M50 25 L 50 15 M70 30 L 78 22 M75 50 L 85 50 M70 70 L 78 78 M50 75 L 50 85 M30 70 L 22 78 M25 50 L 15 50 M30 30 L 22 22" stroke="purple" stroke-width="3"/></svg>', effect: () => (Math.random() < 0.6 ? 20 : -10), hungerEffect: 15, message: (val) => (val > 0 ? '意外と甘い！トロピカルな味がする！' : '舌がピリピリする！少し痺れてきた。') },
+{ name: '食べられそうな草', description: 'そこら中に生えている。ヤギになった気分で食べるか。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M30 80 C 40 40, 45 40, 50 80" fill="none" stroke="green" stroke-width="4"/><path d="M50 80 C 60 40, 65 40, 70 80" fill="none" stroke="green" stroke-width="4"/></svg>', effect: 2, hungerEffect: 8, message: '青臭いが、食物繊維は豊富そうだ。' },
+{ name: '天然のハチミツ', description: '木のうろから甘い香りがする。蜂に注意しながら採取した。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M30 30 H 70 V 70 H 30 Z" fill="#ffc107"/><circle cx="40" cy="40" r="5" fill="#ffa000"/><circle cx="60" cy="40" r="5" fill="#ffa000"/><circle cx="50" cy="60" r="5" fill="#ffa000"/></svg>', effect: 25, hungerEffect: 10, message: '濃厚な甘さが体に染み渡る！最高のエネルギー源だ！' },
+{ name: 'カリカリの虫', description: '見た目は悪いが、貴重なタンパク源だ。勇気を出して…。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="40" y="30" width="20" height="40" fill="brown" rx="10"/><path d="M60 40 L 70 30 M60 50 L 70 50 M60 60 L 70 70" stroke="brown" stroke-width="3"/></svg>', effect: 10, hungerEffect: 15, message: 'エビのような味…？意外とイケるかもしれない。' },
+{ name: 'わかめ？', description: '岩に付着している。味噌汁に入れたい。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M30,80 C 20 40, 40 40, 50 80 S 60 40, 70 80" fill="#006400" opacity="0.8"/></svg>', effect: 5, hungerEffect: 12, message: 'しょっぱい。ミネラルは補給できた気がする。' },
+{ name: '小さなカニ', description: '素早く横歩きしている。殻ごと食べられるか？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="20" ry="10" fill="orangered"/><path d="M30 60 L 20 50 M70 60 L 80 50" stroke="orangered" stroke-width="4"/><path d="M35 68 L 25 78 M65 68 L 75 78" stroke="orangered" stroke-width="4"/></svg>', effect: 12, hungerEffect: 18, message: '殻が硬いが、中の身は美味しい。' },
+{ name: '青く光るキノコ', description: '洞窟の暗闇でぼんやりと光を放っている。ファンタジーな味がするかも？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M75,50 C75,60 65,70 50,70 C35,70 25,60 25,50 C25,30 40,20 50,20 C60,20 75,30 75,50 Z" fill="#00ffff" opacity="0.8"/><rect x="45" y="70" width="10" height="20" fill="#add8e6" rx="2"/></svg>', effect: () => (Math.random() < 0.2 ? 40 : -20), hungerEffect: 10, message: (val) => (val > 0 ? '体がポカポカしてきた！不思議な力が湧いてくる！' : '幻覚が見え始めた…。キノコが話しかけてくる…。') },
+{ name: 'カラフルなイモムシ', description: '見るからに「危険です」と色が主張している。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="25" cy="50" r="10" fill="red"/><circle cx="40" cy="50" r="10" fill="yellow"/><circle cx="55" cy="50" r="10" fill="blue"/><circle cx="70" cy="50" r="10" fill="green"/></svg>', effect: -35, hungerEffect: 8, message: '食べた瞬間、全身に鳥肌が立った！猛烈な吐き気がする！' },
+{ name: '巨大なヤシガニ', description: 'ハサミがとても強そうだ。捕まえるのに苦労した。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="30" ry="20" fill="darkred"/><path d="M20 60 C 10 40, 30 40, 30 50 M80 60 C 90 40, 70 40, 70 50" stroke="darkred" stroke-width="8" fill="none"/></svg>', effect: 25, hungerEffect: 35, message: '身がぎっしり詰まっていて濃厚！最高の獲物だ！' },
+{ name: 'サボテン', description: 'トゲが痛いが、水分をたくさん含んでいそうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="40" y="30" width="20" height="50" fill="green" rx="10"/><path d="M60 40 L 70 30 M60 60 L 70 70 M40 50 L 30 50" stroke="darkgreen" stroke-width="2"/></svg>', effect: 5, hungerEffect: 15, message: 'トゲを避けながら食べた。少し苦いが、水分補給にはなった。' },
+{ name: 'シダ植物', description: 'ワラビやゼンマイの仲間かもしれない。アクが強そうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 20 V 80 M50 30 H 70 M50 40 H 30 M50 50 H 70 M50 60 H 30 M50 70 H 70" stroke="#228b22" stroke-width="4"/></svg>', effect: () => (Math.random() < 0.5 ? 5 : -10), hungerEffect: 9, message: (val) => (val > 0 ? '少しえぐみがあるが、食べられる。' : 'アクが強すぎた！舌が痺れる！') },
+{ name: 'すばしっこいトカゲ', description: 'なんとか捕まえた。鶏肉のような味がすると聞くが…。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M30 50 C 50 40, 70 40, 80 50 L 90 60 C 70 70, 50 70, 30 60 Z" fill="limegreen"/><circle cx="75" cy="48" r="2" fill="black"/></svg>', effect: 15, hungerEffect: 20, message: '淡白で意外と美味しい。尻尾は食べないでおいた。' },
+{ name: 'まだらのヘビ', description: '毒があるかもしれない。頭を落とせば大丈夫か？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 80 C 40 20, 80 80, 90 40" fill="none" stroke="olive" stroke-width="8"/><circle cx="88" cy="42" r="3" fill="red"/></svg>', effect: () => (Math.random() < 0.3 ? 25 : -40), hungerEffect: 22, message: (val) => (val > 0 ? '精力がつきそうな味だ！これで乗り切れる！' : '全身に毒が回ってきた！これはまずい！') },
+{ name: '謎の種子', description: '黒くてツヤツヤしている。食べると体から芽が出るかもしれない。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="10" ry="15" fill="black"/></svg>', effect: () => (Math.random() < 0.1 ? 100 : 0), hungerEffect: 2, message: (val) => (val > 0 ? '奇跡だ！食べた瞬間、全身の傷が癒え、力が満ち溢れた！' : '…特に何も起こらなかった。味もなかった。') },
+
+// --- Inedible Things ---
+{ name: 'ただの石', description: 'どう見ても石だ。食べると鋼の意志が手に入る…わけがない。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="30" ry="20" fill="#a9a9a9"/></svg>', effect: -5, hungerEffect: 1, message: '歯が欠けた…。なぜこれを食べようと思ったんだ…。' },
+{ name: '消しゴム', description: 'なぜこんな所に？食べると嫌な記憶も消えるかもしれない。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="25" y="40" width="50" height="20" fill="#4169e1" rx="2"/><rect x="25" y="60" width="50" height="10" fill="#f0f8ff" rx="2"/></svg>', effect: -10, hungerEffect: 5, message: 'ゴムの味が口いっぱいに広がる…。お腹は少し膨れたが、気分は最悪だ。' },
+{ name: 'ノートの切れ端', description: '何か重要なことが書いてあったかもしれないが、もう読めない。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="70" fill="white" stroke="gray" stroke-width="1"/><line x1="25" y1="30" x2="75" y2="30" stroke="lightblue"/><line x1="25" y1="40" x2="75" y2="40" stroke="lightblue"/><line x1="25" y1="50" x2="75" y2="50" stroke="lightblue"/></svg>', effect: -5, hungerEffect: 8, message: '紙の味しかしない。インクが苦い。でも、食べないよりはマシか…？' },
+{ name: '発泡スチロール', description: 'プチプチと歯ごたえだけは良さそうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="30" width="60" height="40" fill="white"/><circle cx="30" cy="40" r="2" fill="lightgray"/><circle cx="45" cy="55" r="3" fill="lightgray"/><circle cx="60" cy="45" r="2" fill="lightgray"/></svg>', effect: -15, hungerEffect: 12, message: '口の中の水分が全て奪われた！お腹には溜まるが、体に悪すぎる！' },
+{ name: 'ビニール袋', description: 'どこからか飛んできたゴミ。カサカサと音がする。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 80 V 40 C 20 20, 80 20, 80 40 V 80 Z" fill="white" opacity="0.5" stroke="gray" stroke-width="2"/><rect x="40" y="20" width="20" height="10" rx="5" fill="none" stroke="gray" stroke-width="2"/></svg>', effect: -15, hungerEffect: 3, message: '消化できるわけがない…。胃がもたれて気持ち悪い。' },
+{ name: 'チョーク', description: 'なぜか一本だけ落ちている。食べると骨が丈夫になる…？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="30" y="45" width="40" height="10" fill="white"/></svg>', effect: -8, hungerEffect: 2, message: '口の中が粉っぽくて最悪だ。カルシウムは摂れただろうか。' },
+{ name: '服の切れ端', description: '自分が着ている服の袖をちぎってみた。非常食になるか？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 40 L 80 45 L 75 60 L 25 55 Z" fill="teal"/><path d="M26 54 L 28 50 M35 56 L 37 52" stroke="white" stroke-width="1"/></svg>', effect: -10, hungerEffect: 6, message: '糸くずが口に残る。お腹は膨れた気がするが、虚しい…。' },
+{ name: '自分の髪の毛', description: 'もう食べるものがない。タンパク質…のはずだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M30 30 C 80 20, 20 80, 70 70" fill="none" stroke="black" stroke-width="4"/></svg>', effect: -2, hungerEffect: 1, message: '飲み込めない…。悲しい味がする。' },
+{ name: 'シャーペン', description: 'カチカチと芯を出してみる。芯なら食べられるか？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="48" width="60" height="4" fill="silver"/><rect x="80" y="46" width="5" height="8" fill="gray"/><polygon points="15,50 20,48 20,52" fill="black"/></svg>', effect: -12, hungerEffect: 2, message: 'プラスチックと黒鉛の味。体を壊しそうだ。' },
+{ name: '油性マーカー', description: 'ツンとした匂いがする。インクを舐めたらどうなるんだろう。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="45" width="60" height="10" fill="black"/><rect x="15" y="45" width="5" height="10" fill="red"/></svg>', effect: -20, hungerEffect: 1, message: '舌が真っ黒になった！頭がクラクラする！' },
+{ name: 'メガネ', description: '誰かの落とし物。レンズが傷だらけだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="35" cy="50" r="15" fill="none" stroke="black" stroke-width="3"/><circle cx="65" cy="50" r="15" fill="none" stroke="black" stroke-width="3"/><line x1="50" y1="50" x2="80" y2="50" stroke="black" stroke-width="3"/></svg>', effect: -18, hungerEffect: 1, message: '硬すぎて歯が立たない！口の中が切れた！' },
+{ name: '使い捨てマスク', description: 'これもゴミだろうか。フィルターが不味そうだ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="40" width="60" height="20" fill="lightblue"/><line x1="10" y1="50" x2="20" y2="50" stroke="white"/><line x1="80" y1="50" x2="90" y2="50" stroke="white"/></svg>', effect: -7, hungerEffect: 4, message: '不織布の食感は独特だ。体に良いわけがない。' },
+{ name: '湿った土', description: '栄養がありそうだ。ミミズも食べているし…。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 80 C 40 60, 60 60, 80 80 H 20 Z" fill="#8b4513"/></svg>', effect: -10, hungerEffect: 5, message: '口の中がジャリジャリする。お腹を壊しそうだ。' },
+{ name: '木の皮', description: '繊維質で硬い。非常事態だ、仕方ない。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 30 C 80 30, 20 70, 80 70" fill="none" stroke="#a0522d" stroke-width="10"/></svg>', effect: -8, hungerEffect: 7, message: '苦くてマズい。森の味がする…。' },
+{ name: 'サラサラの砂', description: '食べ物ではない。絶対に。でも、お腹は空いている。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 80 C 40 60, 60 60, 80 80 Z" fill="#f0e68c"/></svg>', effect: -15, hungerEffect: 2, message: 'やってしまった…。後悔しかない。' },
+{ name: '錆びた缶詰', description: '中身は不明。開ける道具もない。缶ごと…？', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="20" ry="30" fill="gray"/><ellipse cx="50" cy="20" rx="20" ry="5" fill="darkgray"/><circle cx="55" cy="40" r="5" fill="#cd7f32" opacity="0.7"/></svg>', effect: -25, hungerEffect: 1, message: '鉄の味がする。歯がボロボロになった。' },
+{ name: 'ボロボロの靴', description: '革製品なので、煮込めばスープになるという話を聞いたことがある。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 80 L 80 80 L 70 60 L 40 60 Q 30 60, 30 70 Z" fill="#8b4513"/></svg>', effect: -20, hungerEffect: 10, message: '革は硬く、靴底はゴムの味。食べるものではない。' },
+{ name: '乾電池', description: '舐めるとピリッとすると言うが…。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="30" y="40" width="40" height="20" fill="silver"/><rect x="70" y="45" width="5" height="10" fill="gray"/></svg>', effect: -60, hungerEffect: 1, message: '口の中が痺れ、変な味が広がる！これは猛毒だ！' },
+{ name: '壊れたスマホ', description: 'もちろん電源は入らない。最新機種だが、今はただの板だ。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="30" y="20" width="40" height="60" fill="black" rx="5"/><rect x="32" y="22" width="36" height="56" fill="darkblue"/><path d="M35 25 L 65 75" stroke="white" stroke-width="2"/></svg>', effect: -30, hungerEffect: 2, message: 'ガラスと金属のハーモニー。血の味がする。' },
+{ name: '石鹸のかけら', description: '良い香りがする。泡を食べてみようか。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="30" y="40" width="40" height="20" fill="#f0e68c" rx="5"/></svg>', effect: -15, hungerEffect: 3, message: '口から泡が…。お腹も痛くなってきた。体は綺麗になったかもしれない。' },
+{ name: '古い硬貨', description: '緑青が浮いている。これで何か買えればいいのに。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#cd7f32"/><circle cx="50" cy="50" r="10" fill="#b87333"/></svg>', effect: -10, hungerEffect: 1, message: '金属の味。栄養はゼロだろう。' },
+{ name: 'ガラスの破片', description: 'キラキラして飴玉のようだ。…いや、違う。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="30,70 70,70 50,30" fill="lightblue" opacity="0.7" stroke="white"/></svg>', effect: -50, hungerEffect: 1, message: '口の中も、喉も、胃もズタズタだ。絶対にやるべきではなかった。' },
+{ name: 'スポンジのかけら', description: '水を吸って膨らむだろうか。お腹の中で。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="30" y="40" width="40" height="20" fill="yellow" rx="3"/><circle cx="40" cy="50" r="3" fill="gold" opacity="0.5"/><circle cx="60" cy="48" r="4" fill="gold" opacity="0.5"/></svg>', effect: -9, hungerEffect: 13, message: '食感は最悪。胃の中で膨れて満腹感だけはあるが、栄養はゼロだ。' },
+{ name: '黄金のドクロ', description: '島の奥深くの遺跡で見つけた。呪われていそうだ…。', image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M30 80 C 30 60, 70 60, 70 80 V 90 H 30 Z" fill="gold"/><circle cx="45" cy="65" r="8" fill="black"/><circle cx="65" cy="65" r="8" fill="black"/><polygon points="55,75 50,85 60,85" fill="black"/></svg>', effect: -100, hungerEffect: 100, message: 'かじった瞬間、邪悪な魂に体を乗っ取られた…！' },
+];
+
+
+function initGame() {
+hp = 100;
+hunger = 100;
+day = 1;
+startScreen.classList.add('hidden');
+resultScreen.classList.add('hidden');
+mainGame.classList.remove('hidden');
+updateStatus();
+nextDay();
+}
+
+function updateStatus() {
+dayCounter.textContent = day;
+
+hp = Math.min(Math.max(0, hp), maxHp);
+hunger = Math.min(Math.max(0, hunger), maxHunger);
+
+const hpPercentage = (hp / maxHp) * 100;
+hpBar.style.width = `${hpPercentage}%`;
+hpBar.textContent = hp;
+
+if (hpPercentage < 25) {
+hpBar.classList.remove('bg-green-500');
+hpBar.classList.add('bg-red-500');
+} else {
+hpBar.classList.remove('bg-red-500');
+hpBar.classList.add('bg-green-500');
+}
+
+const hungerPercentage = (hunger / maxHunger) * 100;
+hungerBar.style.width = `${hungerPercentage}%`;
+hungerBar.textContent = hunger;
+
+if (hungerPercentage < 25) {
+hungerBar.classList.remove('bg-yellow-500');
+hungerBar.classList.add('bg-orange-600');
+} else {
+hungerBar.classList.remove('bg-orange-600');
+hungerBar.classList.add('bg-yellow-500');
+}
+}
+
+function nextDay() {
+messageArea.textContent = day > 1 ? 'また新しい一日が始まる…。' : '目の前に何かがある…';
+
+updateStatus();
+if (checkEndConditions()) return;
+
+currentFood = foods[Math.floor(Math.random() * foods.length)];
+
+foodImageContainer.innerHTML = currentFood.image;
+const svgElement = foodImageContainer.querySelector('svg');
+if(svgElement) {
+svgElement.setAttribute('class', 'max-h-full max-w-full rounded bg-white/10 p-2');
+}
+
+foodName.textContent = currentFood.name;
+foodDescription.textContent = currentFood.description;
+
+eatButton.disabled = false;
+skipButton.disabled = false;
+}
+
+function choose(action) {
+eatButton.disabled = true;
+skipButton.disabled = true;
+
+if (action === 'eat') {
+let effectValue;
+let messageText;
+
+if (typeof currentFood.effect === 'function') {
+effectValue = currentFood.effect();
+messageText = currentFood.message(effectValue);
+} else {
+effectValue = currentFood.effect;
+messageText = currentFood.message;
+}
+
+hp += effectValue;
+hunger += currentFood.hungerEffect;
+
+messageArea.textContent = messageText;
+} else {
+hunger -= 5;
+messageArea.textContent = `${currentFood.name} を食べるのをやめた。お腹が少しだけ減った。`;
+}
+
+updateStatus();
+if (checkEndConditions()) return;
+
+setTimeout(() => {
+day++;
+nextDay();
+}, 2500);
+}
+
+function checkEndConditions() {
+if (hp <= 0) {
+showResult(false);
+return true;
+}
+if (hunger <= 0) {
+showResult(false, true); // Game over due to hunger
+return true;
+}
+if (day >= targetDays) {
+showResult(true);
+return true;
+}
+return false;
+}
+
+function showResult(isWin, isHungerDeath = false) {
+mainGame.classList.add('hidden');
+resultScreen.classList.remove('hidden');
+if (isWin) {
+resultTitle.textContent = '生還';
+resultMessage.textContent = `${targetDays}日間、見事に生き延びた！あなたの勝利だ！`;
+} else {
+resultTitle.textContent = 'ゲームオーバー';
+if(isHungerDeath){
+resultMessage.textContent = `${day}日目で空腹のあまり力尽きた…。`;
+} else {
+resultMessage.textContent = `${day}日目で体力が尽きた…。`;
+}
+}
+}
+
+startButton.addEventListener('click', initGame);
+restartButton.addEventListener('click', initGame);
+eatButton.addEventListener('click', () => choose('eat'));
+skipButton.addEventListener('click', () => choose('skip'));
+</script>
+</body>
+</html>
