@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>生き残りゲーム ver.4</title>
+<title>生き残りゲーム ver.4 (BGM付き)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,7 +51,13 @@ transform: translate(4px, 4px);
 </head>
 <body class="text-white flex items-center justify-center min-h-screen">
 
-<div id="game-container" class="w-full max-w-lg mx-auto p-4 md:p-6 backdrop-blur-sm bg-gray-900/80 pixel-border border-8 rounded-lg">
+<!-- ゲームのコンテナ -->
+<div id="game-container" class="relative w-full max-w-lg mx-auto p-4 md:p-6 backdrop-blur-sm bg-gray-900/80 pixel-border border-8 rounded-lg">
+
+<!-- BGMミュートボタンを追加 -->
+<div class="absolute top-2 right-2 z-10">
+    <button id="mute-button" class="btn-pixel !py-1 !px-2 text-xs">BGM オフ</button>
+</div>
 
 <!-- Start Screen -->
 <div id="start-screen" class="text-center">
@@ -114,6 +120,10 @@ transform: translate(4px, 4px);
 </div>
 </div>
 
+<!-- BGM用のaudioタグを追加。loop属性で繰り返し再生 -->
+<audio id="bgm" loop src="https://raw.githubusercontent.com/koseigirlsgapro-sudo/mujintousabaibal/main/ScreenRecording_09-30-2025%2017-40-28_1.mp4"></audio>
+
+
 <script>
 // Game elements
 const startScreen = document.getElementById('start-screen');
@@ -136,6 +146,10 @@ const skipButton = document.getElementById('skip-button');
 
 const resultTitle = document.getElementById('result-title');
 const resultMessage = document.getElementById('result-message');
+
+// BGM関連の要素を取得
+const bgm = document.getElementById('bgm');
+const muteButton = document.getElementById('mute-button');
 
 // Game state
 let hp = 100;
@@ -206,14 +220,21 @@ const foods = [
 
 
 function initGame() {
-hp = 100;
-hunger = 100;
-day = 1;
-startScreen.classList.add('hidden');
-resultScreen.classList.add('hidden');
-mainGame.classList.remove('hidden');
-updateStatus();
-nextDay();
+    hp = 100;
+    hunger = 100;
+    day = 1;
+    startScreen.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    mainGame.classList.remove('hidden');
+
+    // ゲーム開始時にBGMを再生
+    if (bgm.paused) {
+        // ユーザー操作をきっかけに再生を開始します
+        bgm.play().catch(e => console.log("BGMの自動再生に失敗しました。ユーザー操作が必要です。"));
+    }
+
+    updateStatus();
+    nextDay();
 }
 
 function updateStatus() {
@@ -338,6 +359,12 @@ startButton.addEventListener('click', initGame);
 restartButton.addEventListener('click', initGame);
 eatButton.addEventListener('click', () => choose('eat'));
 skipButton.addEventListener('click', () => choose('skip'));
+
+// ミュートボタンのクリックイベントを追加
+muteButton.addEventListener('click', () => {
+    bgm.muted = !bgm.muted;
+    muteButton.textContent = bgm.muted ? 'BGM オン' : 'BGM オフ';
+});
 </script>
 </body>
 </html>
